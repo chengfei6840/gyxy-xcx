@@ -1,3 +1,10 @@
+# 发布说明（首次必做）：
+# 仓库 Settings → Pages → Build and deployment
+#   Source 选「Deploy from a branch」
+#   Branch 选 gh-pages，Folder 选 / (root)
+# 若曾选「GitHub Actions」导致工作流报 configure-pages Not Found，请改回上述分支发布。
+# 站点地址：https://<用户名>.github.io/<仓库名>/
+
 name: Deploy to GitHub Pages
 
 on:
@@ -6,9 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -16,9 +21,6 @@ concurrency:
 
 jobs:
   build-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,11 +38,8 @@ jobs:
           VITE_BASE: /${{ github.event.repository.name }}/
         run: npm run build
 
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v3
+      - name: Push dist to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: dist
-
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
