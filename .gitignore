@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Local env (API keys)
+.env
+.env.local
+.env.*.local
+
+# Logs & IDE
+*.log
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,7 @@
+{
+  "name": "配电房智能监测系统",
+  "description": "提供配电房整站监控、单站监控、告警管理及历史数据分析的移动端智能监测平台。",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
