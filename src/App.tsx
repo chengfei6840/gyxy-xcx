@@ -19,8 +19,6 @@ import {
   ClipboardList, 
   MapPin,
   ArrowLeft,
-  LayoutGrid,
-  List,
   CheckCircle2,
   Info,
   Bookmark,
@@ -29,6 +27,7 @@ import {
   RotateCcw,
   CalendarRange,
   SlidersHorizontal,
+  Globe,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -355,7 +354,6 @@ const WholeStationMonitorPage = ({
   const mode = params?.mode ?? 'monitoring';
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<(typeof MONITOR_FILTERS)[number]>('全部');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const filtered = MOCK_STATIONS.filter(
     s => s.name.includes(search.trim()) && monitorCardFilter(s, filter),
@@ -366,6 +364,24 @@ const WholeStationMonitorPage = ({
     .sort((a, b) => b.currentUnbalance - a.currentUnbalance)
     .slice(0, 5)
     .map(s => ({ name: s.name, value: s.currentUnbalance }));
+
+  const onlineStations = MOCK_STATIONS.filter(s => s.status !== '离线');
+  const totalKw = onlineStations.reduce((a, s) => a + s.currentPower, 0);
+  const realtimeMw = (totalKw / 1000).toFixed(1);
+  /** 演示用装机规模：按电站数量折算 MWp（与接口对接后可改为真实汇总） */
+  const installedMwp = (MOCK_STATIONS.length * 14.23).toFixed(1);
+  const alarmLines = MOCK_STATIONS.filter(
+    s =>
+      s.status === '离线' ||
+      s.status === '异常' ||
+      s.maxTemp >= 75 ||
+      s.currentUnbalance > 15 ||
+      s.voltageUnbalance > 3,
+  ).map(s => {
+    if (s.status === '离线') return `${s.name}通讯中断`;
+    if (s.maxTemp >= 75) return `${s.name}温度超限`;
+    return `${s.name}运行异常`;
+  });
 
   const renderStationCard = (s: Station) => {
     const offline = s.status === '离线';
@@ -464,69 +480,62 @@ const WholeStationMonitorPage = ({
       </div>
 
       <div className="p-3 space-y-3">
-        <div className="bg-white rounded-lg border border-gray-100 p-3 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="relative flex-1 min-w-0">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <input
-                type="search"
-                placeholder="搜索电站名称..."
-                className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 pl-9 pr-2 text-xs outline-none focus:border-teal-500"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white rounded-lg border border-gray-100 p-2 shadow-sm flex items-start gap-1.5 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
+              <Globe className="text-sky-600" size={16} strokeWidth={2} />
             </div>
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
-              <button
-                type="button"
-                aria-label="宫格视图"
-                onClick={() => setViewMode('grid')}
-                className={cn(
-                  'p-2',
-                  viewMode === 'grid' ? 'bg-teal-600 text-white' : 'bg-white text-gray-500',
-                )}
-              >
-                <LayoutGrid size={18} />
-              </button>
-              <button
-                type="button"
-                aria-label="列表视图"
-                onClick={() => setViewMode('list')}
-                className={cn(
-                  'p-2',
-                  viewMode === 'list' ? 'bg-teal-600 text-white' : 'bg-white text-gray-500',
-                )}
-              >
-                <List size={18} />
-              </button>
+            <div className="min-w-0 flex-1">
+              <div className="text-[9px] text-gray-500 leading-tight">电站总规模</div>
+              <div className="text-sm font-bold text-gray-900 leading-tight mt-0.5">
+                {MOCK_STATIONS.length}
+                <span className="text-[9px] font-normal text-gray-600">
+                  {' '}
+                  个 / {installedMwp}MWp
+                </span>
+              </div>
             </div>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-            {MONITOR_FILTERS.map(f => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={cn(
-                  'shrink-0 px-3 py-1.5 rounded-full text-xs border transition-colors',
-                  filter === f
-                    ? 'bg-teal-600 text-white border-teal-600'
-                    : 'bg-white text-gray-600 border-gray-200',
-                )}
-              >
-                {f}
-              </button>
-            ))}
+          <div className="bg-white rounded-lg border border-gray-100 p-2 shadow-sm flex items-start gap-1.5 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+              <Zap className="text-emerald-600" size={16} strokeWidth={2} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[9px] text-gray-500 leading-tight">实时总功率</div>
+              <div className="text-sm font-bold text-gray-900 leading-tight mt-0.5">
+                {realtimeMw}
+                <span className="text-[9px] font-normal text-gray-600"> MW</span>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-100 p-2 shadow-sm min-w-0 flex flex-col">
+            <div className="text-[9px] text-gray-500 leading-tight mb-1 shrink-0">告警动态</div>
+            {alarmLines.length > 0 ? (
+              <div className="relative min-h-[2.5rem] max-h-[2.5rem] overflow-hidden">
+                <div
+                  className="alarm-ticker-track flex flex-col gap-1"
+                  style={{
+                    animationDuration: `${Math.max(alarmLines.length * 3.5, 6)}s`,
+                  }}
+                >
+                  {[...alarmLines, ...alarmLines].map((line, i) => (
+                    <p
+                      key={`${line}-${i}`}
+                      className="text-[9px] text-red-600 leading-snug shrink-0 line-clamp-2 min-h-[2.25rem]"
+                    >
+                      <span className="mr-0.5">•</span>
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-[9px] text-gray-400 leading-snug min-h-[2.5rem] flex items-center">
+                暂无告警
+              </p>
+            )}
           </div>
         </div>
-
-        <div className={cn(viewMode === 'grid' ? 'grid grid-cols-2 gap-2' : 'flex flex-col gap-2')}>
-          {filtered.map(s => renderStationCard(s))}
-        </div>
-
-        {filtered.length === 0 && (
-          <div className="text-center text-sm text-gray-400 py-10">暂无符合条件的电站</div>
-        )}
 
         <div className="space-y-3">
           <div className="bg-white rounded-lg border border-gray-100 p-3 shadow-sm">
@@ -572,6 +581,44 @@ const WholeStationMonitorPage = ({
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-lg border border-gray-100 p-3 shadow-sm">
+          <div className="relative mb-3">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="search"
+              placeholder="搜索电站名称..."
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 pl-9 pr-2 text-xs outline-none focus:border-teal-500"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+            {MONITOR_FILTERS.map(f => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                className={cn(
+                  'shrink-0 px-3 py-1.5 rounded-full text-xs border transition-colors',
+                  filter === f
+                    ? 'bg-teal-600 text-white border-teal-600'
+                    : 'bg-white text-gray-600 border-gray-200',
+                )}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          {filtered.map(s => renderStationCard(s))}
+        </div>
+
+        {filtered.length === 0 && (
+          <div className="text-center text-sm text-gray-400 py-10">暂无符合条件的电站</div>
+        )}
       </div>
     </div>
   );

@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+@keyframes alarm-ticker {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.alarm-ticker-track {
+  animation: alarm-ticker linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alarm-ticker-track {
+    animation: none;
+  }
+}
